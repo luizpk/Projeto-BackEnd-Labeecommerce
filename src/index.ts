@@ -54,6 +54,52 @@ app.get('/ping', (req: Request, res: Response) => {
       res.status(201).send('Usuário registrado com sucesso')
   
   })
+
+  // deleteUserById
+  app.delete("/users/:id", (req:Request, res:Response)=>{
+
+    const id = req.params.id
+
+    const usuarioIndex = users.findIndex((users)=>{
+        return users.id === id
+    })
+
+    console.log("Index:", usuarioIndex)
+
+    if(usuarioIndex>=0){
+        users.splice(usuarioIndex,1)
+        res.status(200).send("Usuário deletado com sucesso")
+
+    }else {
+        res.status(404).send("Usuário não encontrado")
+    }
+
+})
+
+// editUserById
+app.put("/users/:id", (req:Request, res:Response)=>{
+
+  const id = req.params.id
+
+  const newId = req.body.id as string | undefined
+  const newEmail = req.body.email as string | undefined
+  const newPassword = req.body.password as string | undefined
+  
+
+  const userEdit = users.find((userEdit)=>{
+      return userEdit.id === id
+  })
+
+  if(userEdit){
+      userEdit.id = newId || userEdit.id
+      userEdit.email = newEmail || userEdit.email
+      userEdit.password = newPassword || userEdit.password
+
+      res.status(200).send("Usuário modificado com sucesso")
+  } else {
+      res.status(404).send("Usuário não encontrado")
+  }
+})
   
 
 
@@ -96,6 +142,65 @@ app.get('/ping', (req: Request, res: Response) => {
 
 })
 
+// getProductById
+app.get("/products/:id", (req:Request, res:Response)=>{
+    
+  const id = req.params.id
+  const result = products.find((product)=>{
+      return product.id === id
+  })
+  res.status(200).send(result)
+   
+})
+
+// deleteProductById
+app.delete("/products/:id", (req:Request, res:Response)=>{
+
+  const id = req.params.id
+
+  const productIndex = products.findIndex((product)=>{
+      return product.id === id
+  })
+
+  console.log("Index:", productIndex)
+
+  if(productIndex>=0){
+      products.splice(productIndex,1)
+      res.status(200).send("Produto deletado com sucesso")
+
+  }else {
+      res.status(404).send("Produto não encontrado")
+  }
+
+})
+
+// editProductById
+
+app.put("/products/:id", (req:Request, res:Response)=>{
+
+  const id = req.params.id
+
+  const newId = req.body.id as string | undefined
+  const newName = req.body.name as string | undefined
+  const newPrice = req.body.price as number | undefined
+  const newCategory = req.body.category as PRODUCT_CATEGORY | undefined
+
+  const product = products.find((product)=>{
+      return product.id === id
+  })
+
+  if(product){
+      product.id = newId || product.id
+      product.name = newName || product.name
+      product.price = newPrice || product.price
+      product.category = newCategory || product.category
+
+      res.status(200).send("Produto modificado com sucesso")
+  } else {
+      res.status(404).send("Produto não encontrado")
+  }
+})
+
 // ***** PURCHASES *****
 
 // getAllPurchases
@@ -118,4 +223,16 @@ app.post('/purchase', (req:Request, res: Response)=>{
 
     res.status(201).send('Compra realizada com sucesso')
 
+})
+
+
+// getPurchaseByUserId
+app.get("/purchase/:id", (req:Request, res:Response)=>{
+    
+  const userId = req.params.id
+  const result = purchase.find((purchases)=>{
+      return purchases.userId === userId
+  })
+  res.status(200).send(result)
+   
 })
