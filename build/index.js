@@ -128,9 +128,9 @@ app.put("/users/:id", (req, res) => {
             res.status(400);
             throw new Error("'id' deve ser uma string");
         }
-        if (id[0] !== "a") {
+        if (id[0] !== "u") {
             res.status(400);
-            throw new Error("'id' deve iniciar com a letra 'a'");
+            throw new Error("'id' deve iniciar com a letra 'u'");
         }
         const userEdit = database_1.users.find((userEdit) => {
             return userEdit.id === id;
@@ -149,9 +149,9 @@ app.put("/users/:id", (req, res) => {
                 res.status(400);
                 throw new Error("'id' deve ser uma string");
             }
-            if (newId[0] !== "a") {
+            if (newId[0] !== "u") {
                 res.status(400);
-                throw new Error("'id' deve iniciar com a letra 'a'");
+                throw new Error("'id' deve iniciar com a letra 'u'");
             }
             const userId = database_1.users.find((user) => {
                 return user.id === newId;
@@ -248,12 +248,6 @@ app.post('/products', (req, res) => {
         if (newProduct.price <= 0) {
             res.status(400);
             throw new Error("'price' deve ser um número positivo");
-        }
-        if (newProduct.category !== type_1.PRODUCT_CATEGORY.ACCESSORIES &&
-            newProduct.category !== type_1.PRODUCT_CATEGORY.CLOTHES_AND_SHOES &&
-            newProduct.category !== type_1.PRODUCT_CATEGORY.ELECTRONICS) {
-            res.status(400);
-            throw new Error("'category' deve ser do tipo? Acessórios, Roupas e Calçados ou Eletrônicos");
         }
         database_1.products.push(newProduct);
         res.status(201).send('Produto registrado com sucesso');
@@ -456,10 +450,6 @@ app.post('/purchase', (req, res) => {
         if (!foundPrice) {
             res.status(400);
             throw new Error("Produto não encontrado");
-        }
-        if (totalPrice !== quantity * productIds.price) {
-            res.status(400);
-            throw new Error("A quantidade ou o preço está incorreto");
         }
         if (typeof newPurchase.quantity !== "number") {
             res.status(400);

@@ -184,9 +184,9 @@ app.put("/users/:id", (req:Request, res:Response)=>{
     throw new Error("'id' deve ser uma string")
   }
 
-  if (id[0] !== "a") {
+  if (id[0] !== "u") {
     res.status(400)
-    throw new Error("'id' deve iniciar com a letra 'a'")
+    throw new Error("'id' deve iniciar com a letra 'u'")
   }
 
   const userEdit = users.find((userEdit)=>{
@@ -209,17 +209,17 @@ app.put("/users/:id", (req:Request, res:Response)=>{
       throw new Error("'id' deve ser uma string")
     }
 
-    if (newId[0] !== "a") {
+    if (newId[0] !== "u") {
       res.status(400)
-      throw new Error("'id' deve iniciar com a letra 'a'")
+      throw new Error("'id' deve iniciar com a letra 'u'")
     }
 
-    const userId = users.find((user) => {
-      return user.id === newId
-    })
+     const userId = users.find((user) => {
+       return user.id === newId
+     })
 
-    if (userId) {
-      res.status(400)
+      if (userId) {
+       res.status(400)
       throw new Error("'id' já existente base de dados")
     }
   }
@@ -347,15 +347,7 @@ app.put("/users/:id", (req:Request, res:Response)=>{
       throw new Error("'price' deve ser um número positivo")
     }
 
-    if (
-      newProduct.category !== PRODUCT_CATEGORY.ACCESSORIES &&
-      newProduct.category !== PRODUCT_CATEGORY.CLOTHES_AND_SHOES &&
-      newProduct.category !== PRODUCT_CATEGORY.ELECTRONICS) {
-      res.status(400)
-      throw new Error("'category' deve ser do tipo? Acessórios, Roupas e Calçados ou Eletrônicos")
-    }
-
-
+    
     products.push(newProduct)
 
     res.status(201).send('Produto registrado com sucesso')
@@ -513,10 +505,10 @@ try{
           return product.id === newId
         })
     
-        if (product) {
-          res.status(400)
-          throw new Error("'id' já existente base de dados")
-        }
+        //   if (product) {
+        //    res.status(400)
+        //    throw new Error("'id' já existente base de dados")
+        //  }
       }
   
       if (newName !== undefined) {
@@ -549,13 +541,9 @@ try{
         product.price = newPrice || product.price
         product.category = newCategory || product.category
       }
-  
 
-
-      res.status(404).send("Produto não encontrado")
-  
-
-
+      res.status(201).send('Produto Atualizado com sucesso')
+        
 }}catch (error: any) {
     console.log(error)
 
@@ -631,16 +619,6 @@ app.post('/purchase', (req:Request, res: Response)=>{
       res.status(400)
       throw new Error("Produto não encontrado");
     } 
-
-    if(totalPrice !== quantity * productIds.price) {
-      res.status(400)
-      throw new Error("A quantidade ou o preço está incorreto");
-    }
-
-    if (typeof newPurchase.quantity !== "number") {
-      res.status(400)
-      throw new Error("'quantity' deve ser um number")
-    }
 
     if (newPurchase.quantity <= 0) {
       res.status(400)
