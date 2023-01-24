@@ -166,3 +166,41 @@ WHERE
     price >= 79.9
     AND price <= 7500
 ORDER BY price ASC;
+
+-- relações sql I
+
+--Criação da tabela de pedidos
+
+CREATE TABLE purchases(
+    id TEXT PRIMARY KEY NOT NULL,
+    total_price REAL NOT NULL,
+    paid INTEGER NOT NULL,
+    delivered_at TEXT,
+    buyer_id TEXT NOT NULL,
+    FOREIGN KEY (buyer_id) REFERENCES users(id)
+);
+
+INSERT INTO purchases (id, total_price, paid, buyer_id)
+VALUES
+    ('pu001', 50.99, 0, 'u001'),
+    ('pu002', 41.30, 0, 'u001'),
+    ('pu004', 49.99, 0, 'u003'),
+    ('pu005', 7500, 0, 'u002'),
+    ('pu006', 59.9, 0, 'u002'),
+    ('pu007', 12.50, 0, 'u004'),
+    ('pu008', 12.50, 0, 'u004'),
+    ('pu009', 56.7, 0, 'u003'),
+    ('pu010', 12.50, 0, 'u005'),
+    ('pu011', 10.99, 0, 'u005');
+
+    SELECT * FROM purchases;
+
+    UPDATE purchases
+SET
+    delivered_at = DATETIME('now')
+WHERE id = 'pu006';
+
+SELECT * FROM purchases
+INNER JOIN users
+ON purchases.buyer_id = users.id
+WHERE users.id = 'u001';
