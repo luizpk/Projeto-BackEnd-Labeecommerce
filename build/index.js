@@ -364,10 +364,6 @@ app.put("/products/:id", (req, res) => {
                 const product = database_1.products.find((product) => {
                     return product.id === newId;
                 });
-                if (product) {
-                    res.status(400);
-                    throw new Error("'id' já existente base de dados");
-                }
             }
             if (newName !== undefined) {
                 if (typeof newName !== "string") {
@@ -395,7 +391,7 @@ app.put("/products/:id", (req, res) => {
                 product.price = newPrice || product.price;
                 product.category = newCategory || product.category;
             }
-            res.status(404).send("Produto não encontrado");
+            res.status(201).send('Produto Atualizado com sucesso');
         }
     }
     catch (error) {
@@ -450,10 +446,6 @@ app.post('/purchase', (req, res) => {
         if (!foundPrice) {
             res.status(400);
             throw new Error("Produto não encontrado");
-        }
-        if (typeof newPurchase.quantity !== "number") {
-            res.status(400);
-            throw new Error("'quantity' deve ser um number");
         }
         if (newPurchase.quantity <= 0) {
             res.status(400);
