@@ -1,14 +1,11 @@
-export enum PRODUCT_CATEGORY {
-    ACCESSORIES = "Acessórios",
-    CLOTHES_AND_SHOES = "Roupas e calçados",
-    ELECTRONICS = "Eletrônicos"
-};
 
 export type TUser = {
 
     id:string,
-    email:string,
-    password:string | undefined
+    name: string | void,
+    email:string | undefined,
+    password:string | undefined,
+    created_at: string
 };
 
 export type TProduct = {
@@ -16,13 +13,22 @@ export type TProduct = {
     id: string,
     name:string,
     price: number,
-    category: PRODUCT_CATEGORY
+    description: string;
+    image_url: string
 };
 
 export type TPurchase = {
-    
-    userId:string,
-    product: string,
-    quantity: number,
-    totalPrice: number
+    id: string,
+    buyer_id: string,
+    total_price: number,
+    created_at: string,
+    paid: boolean
 };
+
+
+
+
+
+
+
+  

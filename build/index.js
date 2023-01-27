@@ -1,24 +1,37 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const database_1 = require("./database");
-const type_1 = require("./type");
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
+const knex_1 = require("./database/knex");
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use((0, cors_1.default)());
 app.listen(3003, () => {
     console.log("Servidor rodando na porta 3003");
 });
+const regexEmail = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g;
+const regexPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,12}$/g;
 app.get('/ping', (req, res) => {
     res.send('Pong!');
 });
-app.get('/users', (req, res) => {
+app.get('/users', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        res.status(200).send(database_1.users);
+        const result = yield knex_1.db.raw(`
+      SELECT * FROM users;
+      `);
+        res.status(200).send(result);
     }
     catch (error) {
         console.log(error);
@@ -27,50 +40,63 @@ app.get('/users', (req, res) => {
         }
         res.send(error.message);
     }
-});
-app.post('/users', (req, res) => {
+}));
+app.post('/users', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { id, email, password } = req.body;
+        const id = req.body.id;
+        const name = req.body.name;
+        const email = req.body.email;
+        const password = req.body.password;
         const newUser = {
-            id,
-            email,
-            password
+            id: id,
+            name: name,
+            email: email,
+            password: password,
         };
-        if (typeof newUser.id !== "string") {
+        if (typeof id !== "string") {
             res.status(400);
             throw new Error("'id' deve ser uma string");
         }
-        if (newUser.id[0] !== "u") {
+        if (id[0] !== "u") {
             res.status(400);
             throw new Error("'id' deve iniciar com a letra 'u'");
         }
-        const ids = database_1.users.find((user) => user.id === id);
-        if (ids) {
+        yield knex_1.db.raw(`
+        INSERT INTO users (id, name, email, password)
+        VALUES ("${id}", "${name}", "${email}", "${password}");
+        `);
+        res.send({ message: "Cadastro realizado com sucesso!" });
+        const [userExists] = yield (0, knex_1.db)("user").where({ id: id });
+        if (userExists) {
             res.status(400);
             throw new Error("'id' já existente");
         }
-        if (typeof newUser.email !== "string") {
+        if (typeof email !== "string") {
             res.status(400);
             throw new Error("Digite um email válido");
         }
-        if (!newUser.email.includes("@")) {
+        if (!email.match(regexEmail)) {
             res.status(400);
-            throw new Error("Digite um email válido");
+            throw new Error("Digite um email válido.");
         }
-        const emails = database_1.users.find((user) => user.email === email);
-        if (emails) {
+        const [emailExists] = yield (0, knex_1.db)("users").where({ email: email });
+        if (emailExists) {
             res.status(400);
-            throw new Error("'email' já existente");
+            throw new Error("'email' do usuário já existente");
         }
-        if (typeof newUser.password !== "string") {
+        if (typeof name !== "string") {
+            res.status(400);
+            throw new Error("'nome' deve ser uma string");
+        }
+        if (typeof password !== "string") {
             res.status(400);
             throw new Error("'password' deve ser uma string");
         }
-        if (!newUser.password.match((/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,12}$/g))) {
+        if (!password.match((/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^\da-zA-Z]).{8,12}$/g))) {
             res.status(400);
             throw new Error("'password' deve possuir entre 8 e 12 caracteres, com letras maiúsculas e minúsculas e no mínimo um número e um caractere especial");
         }
-        database_1.users.push(newUser);
+        yield (0, knex_1.db)("users").insert(newUser);
         res.status(201).send('Usuário registrado com sucesso');
     }
     catch (error) {
@@ -80,34 +106,28 @@ app.post('/users', (req, res) => {
         }
         res.send(error.message);
     }
-});
-app.delete("/users/:id", (req, res) => {
+}));
+app.delete("/users/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const id = req.params.id;
-        const usuarioIndex = database_1.users.findIndex((users) => {
-            return users.id === id;
-        });
-        const result = database_1.users.find((user) => {
-            return user.id === id;
-        });
-        if (typeof id !== "string") {
-            res.status(400);
-            throw new Error("'id' deve ser uma string");
-        }
-        if (id[0] !== "u") {
-            res.status(400);
-            throw new Error("'userId' deve iniciar com a letra 'u'");
-        }
-        if (!result) {
-            res.status(400);
-            throw new Error("'id' não existente na base de dados");
-        }
-        if (usuarioIndex >= 0) {
-            database_1.users.splice(usuarioIndex, 1);
-            res.status(200).send("Usuário deletado com sucesso");
-        }
-        else {
-            res.status(404).send("Usuário não encontrado");
+        const idToDelete = req.params.id;
+        const [result] = yield (0, knex_1.db)("users").where({ id: idToDelete });
+        if (idToDelete !== undefined) {
+            if (typeof idToDelete !== "string") {
+                res.status(400);
+                throw new Error("'id' deve ser uma string");
+            }
+            if (idToDelete[0] !== "u") {
+                res.status(400);
+                throw new Error("'buyer_id' deve iniciar com a letra 'u'");
+            }
+            if (!result) {
+                res.status(400);
+                throw new Error("'id' não existe");
+            }
+            yield (0, knex_1.db)("purchases").del().where({ buyer_id: idToDelete });
+            yield (0, knex_1.db)("purchases_products").del().where({ purchase_id: idToDelete });
+            yield (0, knex_1.db)("users").del().where({ id: idToDelete });
+            res.status(200).send("usuário deletado com sucesso");
         }
     }
     catch (error) {
@@ -117,61 +137,76 @@ app.delete("/users/:id", (req, res) => {
         }
         res.send(error.message);
     }
-});
-app.put("/users/:id", (req, res) => {
+}));
+app.put("/users/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const id = req.params.id;
+        const idToEdit = req.params.id;
         const newId = req.body.id;
+        const newName = req.body.name;
         const newEmail = req.body.email;
         const newPassword = req.body.password;
-        if (typeof id !== "string") {
+        const [userExists] = yield (0, knex_1.db)("users").where({ id: idToEdit });
+        const [userIdExists] = yield (0, knex_1.db)("users").where({ id: newId });
+        const [emailExists] = yield (0, knex_1.db)("users").where({ email: newEmail });
+        if (typeof idToEdit !== "string") {
             res.status(400);
             throw new Error("'id' deve ser uma string");
         }
-        if (id[0] !== "u") {
+        if (idToEdit[0] !== "u") {
             res.status(400);
             throw new Error("'id' deve iniciar com a letra 'u'");
         }
-        const userEdit = database_1.users.find((userEdit) => {
-            return userEdit.id === id;
-        });
-        if (userEdit) {
-            userEdit.id = newId || userEdit.id;
-            userEdit.email = newEmail || userEdit.email;
-            userEdit.password = newPassword || userEdit.password;
-            res.status(200).send("Usuário modificado com sucesso");
+        if (!userExists) {
+            res.status(400);
+            throw new Error("'id' não existente na base de dados");
         }
-        else {
-            res.status(404).send("Usuário não encontrado");
+        if (newName !== undefined) {
+            if (typeof newName !== "string") {
+                res.status(400);
+                throw new Error("'name' deve ser uma string");
+            }
         }
-        if (newId !== undefined) {
-            if (typeof newId !== "string") {
-                res.status(400);
-                throw new Error("'id' deve ser uma string");
-            }
-            if (newId[0] !== "u") {
-                res.status(400);
-                throw new Error("'id' deve iniciar com a letra 'u'");
-            }
-            const userId = database_1.users.find((user) => {
-                return user.id === newId;
-            });
-            if (userId) {
-                res.status(400);
-                throw new Error("'id' já existente base de dados");
-            }
+        if (typeof newId !== "string") {
+            res.status(400);
+            throw new Error("'id' deve ser uma string");
+        }
+        if (newId[0] !== "u") {
+            res.status(400);
+            throw new Error("'id' deve iniciar com a letra 'u'");
         }
         if (newEmail !== undefined) {
             if (typeof newEmail !== "string") {
                 res.status(400);
                 throw new Error("'email' deve ser uma string");
             }
-            if (!newEmail.match((/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g))) {
+            if (!newEmail.match(regexEmail)) {
                 res.status(400);
                 throw new Error("'email' deve possuir as seguintes regras");
             }
+            if (emailExists) {
+                res.status(400);
+                throw new Error("'email' já existente na base de dados");
+            }
         }
-        res.status(200).send("usuário editado com sucesso");
+        if (!newPassword.match(regexPassword)) {
+            res.status(400);
+            throw new Error("'password' deve possuir entre 8 e 12 caracteres, com letras maiúsculas e minúsculas e no mínimo um número e um caractere especial");
+        }
+        const [user] = yield (0, knex_1.db)("users").where({ id: idToEdit });
+        if (user) {
+            const updatedUser = {
+                id: newId || user.id,
+                name: newName || user.name,
+                email: newEmail || user.email,
+                password: newPassword || user.password,
+            };
+            yield (0, knex_1.db)("users").update(updatedUser).where({ id: idToEdit });
+        }
+        else {
+            res.status(404);
+            throw new Error("'id' não encontrada");
+        }
+        res.status(200).send("usuário atualizado com sucesso");
     }
     catch (error) {
         console.log(error);
@@ -180,10 +215,13 @@ app.put("/users/:id", (req, res) => {
         }
         res.send(error.message);
     }
-});
-app.get('/products', (req, res) => {
+}));
+app.get('/products', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        res.status(200).send(database_1.products);
+        const result = yield knex_1.db.raw(`
+      SELECT * FROM products;
+      `);
+        res.status(200).send(result);
     }
     catch (error) {
         if (res.statusCode === 200) {
@@ -191,13 +229,11 @@ app.get('/products', (req, res) => {
         }
         res.send(error.message);
     }
-});
-app.get('/products/search', (req, res) => {
+}));
+app.get('/products/search', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const q = req.query.q;
-        const result = database_1.products.filter((product) => {
-            return product.name.toLowerCase().includes(q.toLowerCase());
-        });
+        const result = yield (0, knex_1.db)("products").where("name", "LIKE", `%${q}%`);
         if (q.length < 1) {
             res.status(400);
             throw new Error("'query params' deve conter pelo menos um caractere");
@@ -214,43 +250,52 @@ app.get('/products/search', (req, res) => {
         }
         res.send(error.message);
     }
-});
-app.post('/products', (req, res) => {
+}));
+app.post('/products', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { id, name, price, category } = req.body;
+        const { id, name, price, description, image_url } = req.body;
         const newProduct = {
-            id,
-            name,
-            price,
-            category
+            id: id,
+            name: name,
+            price: price,
+            description: description,
+            image_url: image_url,
         };
-        const ids = database_1.products.find((product) => product.id === id);
-        if (ids) {
+        const [productExists] = yield (0, knex_1.db)("products").where({ id: id });
+        if (productExists) {
             res.status(400);
             throw new Error("'id' já existente");
         }
-        if (typeof newProduct.id !== "string") {
+        if (typeof id !== "string") {
             res.status(400);
             throw new Error("'id' deve ser uma string");
         }
-        if (newProduct.id[0] !== "p") {
+        if (id[0] !== "p") {
             res.status(400);
             throw new Error("'id' deve iniciar com a letra 'p'");
         }
-        if (typeof newProduct.name !== "string") {
+        if (typeof name !== "string") {
             res.status(400);
             throw new Error("'name' deve ser uma string");
         }
-        if (typeof newProduct.price !== "number") {
+        if (typeof price !== "number") {
             res.status(400);
             throw new Error("'price' deve ser um number");
         }
-        if (newProduct.price <= 0) {
+        if (price <= 0) {
             res.status(400);
             throw new Error("'price' deve ser um número positivo");
         }
-        database_1.products.push(newProduct);
-        res.status(201).send('Produto registrado com sucesso');
+        if (typeof description !== "string") {
+            res.status(400);
+            throw new Error("'description' deve ser uma string");
+        }
+        if (typeof image_url !== "string") {
+            res.status(400);
+            throw new Error("'image' deve ser uma string");
+        }
+        yield (0, knex_1.db)("products").insert(newProduct);
+        res.status(201).send("Produto cadastrado com sucesso!");
     }
     catch (error) {
         console.log(error);
@@ -259,25 +304,24 @@ app.post('/products', (req, res) => {
         }
         res.send(error.message);
     }
-});
-app.get("/products/:id", (req, res) => {
+}));
+app.get("/products/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const id = req.params.id;
-        const result = database_1.products.find((product) => {
-            return product.id === id;
-        });
-        if (typeof id !== "string") {
+        const idToSearch = req.params.id;
+        if (typeof idToSearch !== "string") {
             res.status(400);
             throw new Error("'id' deve ser uma string");
         }
-        if (id[0] !== "p") {
+        if (idToSearch[0] !== "p") {
             res.status(400);
-            throw new Error("'userId' deve iniciar com a letra 'p'");
+            throw new Error("'id' deve iniciar com a letra 'p'");
         }
-        if (!result) {
+        const [productExists] = yield (0, knex_1.db)("products").where({ id: idToSearch });
+        if (!productExists) {
             res.status(400);
-            throw new Error("'id' não existente");
+            throw new Error("'id' não existente na base de dados");
         }
+        const result = yield (0, knex_1.db)("products").where({ id: idToSearch });
         res.status(200).send(result);
     }
     catch (error) {
@@ -287,35 +331,25 @@ app.get("/products/:id", (req, res) => {
         }
         res.send(error.message);
     }
-});
-app.delete("/products/:id", (req, res) => {
+}));
+app.delete("/products/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const id = req.params.id;
-        const productIndex = database_1.products.findIndex((product) => {
-            return product.id === id;
-        });
-        const productIds = database_1.products.find((product) => {
-            return product.id === id;
-        });
-        if (typeof id !== "string") {
+        const idToDelete = req.params.id;
+        const result = yield (0, knex_1.db)("products").where({ id: idToDelete });
+        if (typeof idToDelete !== "string") {
             res.status(400);
             throw new Error("'id' deve ser uma string");
         }
-        if (id[0] !== "p") {
+        if (idToDelete[0] !== "p") {
             res.status(400);
             throw new Error("'userId' deve iniciar com a letra 'p'");
         }
-        if (!productIds) {
+        if (!result) {
             res.status(404);
             throw new Error("'id' não existente na base de dados");
         }
-        if (productIndex >= 0) {
-            database_1.products.splice(productIndex, 1);
-            res.status(200).send("Produto deletado com sucesso");
-        }
-        else {
-            res.status(404).send("Produto não encontrado");
-        }
+        yield (0, knex_1.db)("products").del().where({ id: idToDelete });
+        res.status(200).send("produto deletado com sucesso");
     }
     catch (error) {
         console.log(error);
@@ -324,22 +358,37 @@ app.delete("/products/:id", (req, res) => {
         }
         res.send(error.message);
     }
-});
-app.put("/products/:id", (req, res) => {
+}));
+app.put("/products/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const id = req.params.id;
         const newId = req.body.id;
         const newName = req.body.name;
         const newPrice = req.body.price;
-        const newCategory = req.body.category;
-        const product = database_1.products.find((product) => {
-            return product.id === id;
-        });
+        const newdescription = req.body.description;
+        const newImage = req.body.image_url;
+        const productExists = yield (0, knex_1.db)("products").where({ id: id });
+        const [product] = yield (0, knex_1.db)("products").where({ id: id });
+        if (typeof id !== "string") {
+            res.status(400);
+            throw new Error("'id' deve ser uma string");
+        }
+        if (id[0] !== "p") {
+            res.status(400);
+            throw new Error("'id' deve iniciar com a letra 'p'");
+        }
+        if (!productExists) {
+            res.status(400);
+            throw new Error("'id' não existente na base de dados");
+        }
         if (product) {
-            product.id = newId || product.id;
-            product.name = newName || product.name;
-            product.price = newPrice || product.price;
-            product.category = newCategory || product.category;
+            const updatedProduct = {
+                id: newId || product.id,
+                name: newName || product.name,
+                price: newPrice || product.price,
+                description: newdescription || product.description,
+                imageUrl: newImage || product.imageUrl,
+            };
             if (typeof id !== "string") {
                 res.status(400);
                 throw new Error("'id' deve ser uma string");
@@ -352,18 +401,13 @@ app.put("/products/:id", (req, res) => {
                 res.status(400);
                 throw new Error("'id' não existente na base de dados");
             }
-            if (newId !== undefined) {
-                if (typeof newId !== "string") {
-                    res.status(400);
-                    throw new Error("'id' deve ser uma string");
-                }
-                if (newId[0] !== "p") {
-                    res.status(400);
-                    throw new Error("'id' deve iniciar com a letra 'p'");
-                }
-                const product = database_1.products.find((product) => {
-                    return product.id === newId;
-                });
+            if (typeof newId !== "string") {
+                res.status(400);
+                throw new Error("'id' deve ser uma string");
+            }
+            if (newId[0] !== "p") {
+                res.status(400);
+                throw new Error("'id' deve iniciar com a letra 'p'");
             }
             if (newName !== undefined) {
                 if (typeof newName !== "string") {
@@ -377,19 +421,15 @@ app.put("/products/:id", (req, res) => {
                     throw new Error("'price' deve ser um number");
                 }
             }
-            if (newCategory !== undefined) {
-                if (newCategory !== type_1.PRODUCT_CATEGORY.ACCESSORIES &&
-                    newCategory !== type_1.PRODUCT_CATEGORY.CLOTHES_AND_SHOES &&
-                    newCategory !== type_1.PRODUCT_CATEGORY.ELECTRONICS) {
-                    res.status(400);
-                    throw new Error("'category' deve ser do tipo? Acessórios, Roupas e Calçados ou Eletrônicos");
-                }
+            if (typeof newdescription !== "string") {
+                res.status(400);
+                throw new Error("'description' deve ser uma stringr");
             }
-            if (product) {
-                product.id = newId || product.id;
-                product.name = newName || product.name;
-                product.price = newPrice || product.price;
-                product.category = newCategory || product.category;
+        }
+        if (newImage !== undefined) {
+            if (typeof newImage !== "string") {
+                res.status(400);
+                throw new Error("'image' deve ser uma string");
             }
             res.status(201).send('Produto Atualizado com sucesso');
         }
@@ -401,65 +441,64 @@ app.put("/products/:id", (req, res) => {
         }
         res.send(error.message);
     }
-});
-app.get('/purchase', (req, res) => {
-    res.status(200).send(database_1.purchase);
-});
-app.post('/purchase', (req, res) => {
+}));
+app.get('/purchase', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { userId, product, quantity, totalPrice } = req.body;
+        const result = yield (0, knex_1.db)("purchases");
+        res.status(200).send(result);
+    }
+    catch (error) {
+        console.log(error);
+        if (req.statusCode === 200) {
+            res.status(500);
+        }
+        if (error instanceof Error) {
+            res.send(error.message);
+        }
+        else {
+            res.send("Erro inesperado");
+        }
+    }
+}));
+app.post('/purchase', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id, total_price, buyer_id } = req.body;
         const newPurchase = {
-            userId,
-            product,
-            quantity,
-            totalPrice
+            id: id,
+            buyer_id: buyer_id,
+            total_price: total_price,
         };
-        const userIds = database_1.users.find((user) => user.id === userId);
-        if (!userIds) {
+        const [purchaseExists] = yield (0, knex_1.db)("purchases").where({ id: id });
+        if (!id) {
             res.status(404);
-            throw new Error("'id' do usuário não existente");
+            throw new Error("Compra não existente");
         }
-        if (typeof newPurchase.userId !== "string") {
+        if (typeof id !== "string") {
             res.status(400);
-            throw new Error("'userId' deve ser uma string");
+            throw new Error("'id' deve ser uma string");
         }
-        if (newPurchase.userId[0] !== "u") {
+        if (purchaseExists) {
             res.status(400);
-            throw new Error("'userId' deve iniciar com a letra 'u'");
+            throw new Error("'id' da compra já existente");
         }
-        const productIds = database_1.products.find((products) => products.id === product);
-        if (!productIds) {
-            res.status(404);
-            throw new Error("'id' do produto não existente");
-        }
-        if (typeof newPurchase.product !== "string") {
+        if (typeof buyer_id !== "string") {
             res.status(400);
-            throw new Error("'productId' deve ser uma string");
+            throw new Error("'buyer' deve ser uma string");
         }
-        if (newPurchase.product[0] !== "p") {
+        const [buyerExists] = yield (0, knex_1.db)("users").where({ id: buyer_id });
+        if (!buyerExists) {
             res.status(400);
-            throw new Error("'productId' deve iniciar com a letra 'p'");
+            throw new Error("'id' de usuário não existente");
         }
-        const foundPrice = database_1.products.find((product) => {
-            return product.price === productIds.price;
-        });
-        if (!foundPrice) {
-            res.status(400);
-            throw new Error("Produto não encontrado");
-        }
-        if (newPurchase.quantity <= 0) {
-            res.status(400);
-            throw new Error("'quantity' deve ser um número positivo");
-        }
-        if (typeof newPurchase.totalPrice !== "number") {
+        if (typeof total_price !== "number") {
             res.status(400);
             throw new Error("'totalPrice' deve ser um number");
         }
-        if (newPurchase.totalPrice <= 0) {
+        if (total_price <= 0) {
             res.status(400);
             throw new Error("'totalPrice' deve ser um número positivo");
         }
-        database_1.purchase.push(newPurchase);
+        yield (0, knex_1.db)("purchases").insert(newPurchase);
         res.status(201).send('Compra realizada com sucesso');
     }
     catch (error) {
@@ -469,33 +508,101 @@ app.post('/purchase', (req, res) => {
         }
         res.send(error.message);
     }
-});
-app.get("/purchase/:id", (req, res) => {
+}));
+app.get("/users/:id/purchases", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const userId = req.params.id;
-        const result = database_1.purchase.find((purchases) => {
-            return purchases.userId === userId;
-        });
-        if (typeof userId !== "string") {
+        const id = req.params.id;
+        const userExist = yield (0, knex_1.db)("purchases").where({ buyer_id: id });
+        const result = yield (0, knex_1.db)("purchases")
+            .select("id", "buyer_id AS buyerID", "total_price AS totalPrice", "created_at AS createAt", "paid AS Ispaid")
+            .where({ buyer_id: id });
+        if (typeof id !== "string") {
             res.status(400);
             throw new Error("'id' deve ser uma string");
         }
-        if (userId[0] !== "u") {
+        if (id[0] !== "u") {
             res.status(400);
-            throw new Error("'userId' deve iniciar com a letra 'u'");
+            throw new Error("'id' deve iniciar com a letra 'u'");
         }
-        if (!result) {
+        if (!userExist) {
             res.status(400);
-            throw new Error("'id' não existente");
+            throw new Error("'id' de usuário não existente");
         }
-        res.status(200).send(result);
+        if (result) {
+            res.status(200).send(result);
+        }
     }
     catch (error) {
         console.log(error);
-        if (res.statusCode === 201) {
+        if (req.statusCode === 200) {
             res.status(500);
         }
-        res.send(error.message);
+        if (error instanceof Error) {
+            res.send(error.message);
+        }
+        else {
+            res.send("Erro inesperado");
+        }
     }
-});
+}));
+app.get("/purchases/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const id = req.params.id;
+        const [purchase] = yield (0, knex_1.db)("purchases").where({ id: id });
+        if (purchase) {
+            const [dataPurchase] = yield (0, knex_1.db)("purchases")
+                .select("purchases.id AS purchasesId", "purchases.total_price AS totalPrice", "purchases.created_at AS createdAt", "purchases.paid AS paid", "users.id AS buyerId", "users.email", "users.name")
+                .innerJoin("users", "purchases.buyer_id", "=", "users.id");
+            const purchaseProducts = yield (0, knex_1.db)("purchases_products")
+                .select("purchases_products.product_id AS id", "products.name", "products.price", "products.description", "products.imageUrl AS urlImage", "purchases_products.quantity")
+                .innerJoin("products", "products.id", "=", "purchases_products.product_id");
+            const result = Object.assign(Object.assign({}, dataPurchase), { paid: dataPurchase.paid === 0 ? false : true, productsList: purchaseProducts });
+            res.status(200).send(result);
+        }
+        else {
+            res.status(404);
+            throw new Error("Compra não encontrada");
+        }
+    }
+    catch (error) {
+        console.log(error);
+        if (req.statusCode === 200) {
+            res.status(500);
+        }
+        if (error instanceof Error) {
+            res.send(error.message);
+        }
+        else {
+            res.send("Erro inesperado");
+        }
+    }
+}));
+app.delete('/purchases/:id', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const id = req.params.id;
+        if (typeof id !== "string") {
+            res.status(400);
+            throw new Error("Id precisa ser um string");
+        }
+        if (id[0] !== "p") {
+            res.status(400);
+            throw new Error("Id de purchases precisa comecar com p");
+        }
+        yield (0, knex_1.db)("purchases").del().where({ id: id });
+        yield (0, knex_1.db)("purchases_products").del().where({ purchase_id: id });
+        res.status(200).send({ message: "Compra apgada com sucesso" });
+    }
+    catch (error) {
+        console.log(error);
+        if (req.statusCode === 200) {
+            res.status(500);
+        }
+        if (error instanceof Error) {
+            res.send({ message: error.message });
+        }
+        else {
+            res.send({ message: "Erro inesperado" });
+        }
+    }
+}));
 //# sourceMappingURL=index.js.map
